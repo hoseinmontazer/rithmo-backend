@@ -1,0 +1,767 @@
+{
+  "info": {
+    "name": "Rithmo API - Cycle Tracker",
+    "description": "Period and cycle tracking endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "generated-20251217-173653",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.rithmo.ir",
+      "type": "string",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token (auto-populated after login)"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token (auto-populated after login)"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "Current user ID (set manually if needed)"
+    },
+    {
+      "key": "partner_id",
+      "value": "",
+      "type": "string",
+      "description": "Partner user ID (set manually for partner operations)"
+    }
+  ],
+  "item": [
+    {
+      "name": "Period Management",
+      "item": [
+        {
+          "name": "List All Periods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get all periods for authenticated user"
+          }
+        },
+        {
+          "name": "List Partner's Periods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/?role=partner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "partner"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get partner's periods (if linked)"
+          }
+        },
+        {
+          "name": "Create New Period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/periods/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Create a new period entry",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2025-01-15\",\n  \"end_date\": \"2025-01-20\",\n  \"symptoms\": \"cramps,headache,fatigue\",\n  \"medication\": \"ibuprofen,heating pad\",\n  \"cycle_length\": 28,\n  \"period_duration\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Specific Period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get details of a specific period"
+          }
+        },
+        {
+          "name": "Update Specific Period",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/periods/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Update a specific period completely",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2025-01-15\",\n  \"end_date\": \"2025-01-21\",\n  \"symptoms\": \"cramps,headache,fatigue,bloating\",\n  \"medication\": \"ibuprofen\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Partial Update Period",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/periods/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Partially update a specific period",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_date\": \"2025-01-21\",\n  \"symptoms\": \"cramps,headache,fatigue,bloating\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Latest Period",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/periods/update/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "update",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Update the latest period using custom endpoint",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period_id\": 1,\n  \"end_date\": \"2025-01-21\",\n  \"symptoms\": \"cramps,headache,fatigue\",\n  \"medication\": \"ibuprofen\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Period",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Delete a specific period"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cycle Analysis",
+      "item": [
+        {
+          "name": "Get Cycle Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/cycle_analysis/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "cycle_analysis",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get comprehensive cycle analysis for user"
+          }
+        },
+        {
+          "name": "Get Partner Cycle Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/cycle_analysis/?role=partner",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "cycle_analysis",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "partner"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get partner's cycle analysis (limited data)"
+          }
+        },
+        {
+          "name": "Get Cycle Insights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/cycle_insights/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "cycle_insights",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get personalized cycle insights and predictions"
+          }
+        },
+        {
+          "name": "Get Wellness Correlation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/wellness_correlation/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "wellness_correlation",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Analyze correlation between wellness metrics and cycle phases"
+          }
+        },
+        {
+          "name": "Get Symptom Patterns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/periods/symptom_patterns/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "symptom_patterns",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Analyze symptom patterns across cycles"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ovulation Tracking",
+      "item": [
+        {
+          "name": "Get Latest Ovulation Prediction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ovulation/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ovulation",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get ovulation prediction for latest period"
+          }
+        },
+        {
+          "name": "Get Ovulation for Specific Period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ovulation/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ovulation",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get ovulation prediction for specific period ID"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wellness Logs",
+      "item": [
+        {
+          "name": "List Wellness Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wellness",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get all wellness logs for user"
+          }
+        },
+        {
+          "name": "Create/Update Daily Wellness Log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wellness",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Create or update wellness log for today (auto-creates/updates based on date)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stress_level\": 3,\n  \"sleep_hours\": 7.5,\n  \"mood_level\": 1,\n  \"energy_level\": 6,\n  \"pain_level\": 2,\n  \"exercise_minutes\": 30,\n  \"nutrition_quality\": 4,\n  \"caffeine_intake\": 2,\n  \"alcohol_intake\": 0,\n  \"smoking\": 0,\n  \"anxiety_level\": 2,\n  \"focus_level\": 7,\n  \"notes\": \"Feeling good today, had a productive workout\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Specific Wellness Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wellness",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Get specific wellness log entry"
+          }
+        },
+        {
+          "name": "Update Wellness Log",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wellness",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Update specific wellness log",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stress_level\": 2,\n  \"sleep_hours\": 8.0,\n  \"mood_level\": 2,\n  \"energy_level\": 8,\n  \"notes\": \"Updated - feeling much better after good sleep\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Wellness Log",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/1/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wellness",
+                "1",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Delete specific wellness log"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Generation",
+      "item": [
+        {
+          "name": "Generate Smart Notifications",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/generate-notifications/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "generate-notifications",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Generate smart notifications based on cycle data and preferences"
+          }
+        }
+      ]
+    }
+  ]
+}

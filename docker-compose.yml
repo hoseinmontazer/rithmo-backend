@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  period:
+    image: period:latest
+    container_name: period
+    ports:
+      - "8002:8000"
+    environment:
+      - DEBUG=True
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - /home/hosein/models--google--flan-t5-large:/root/.cache/huggingface/hub/models--google--flan-t5-large
+      - /docker/period/app/ml_models:/app/ml_models
+      - /docker/period/app/ml_cache:/app/ml_cache
+
+    env_file:
+      - /docker/period/app/env/.env
+    networks:
+      - gotorrentz
+
+networks:
+  gotorrentz:
+    external: true

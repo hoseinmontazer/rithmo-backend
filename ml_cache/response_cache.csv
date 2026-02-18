@@ -1,0 +1,24 @@
+primary_label,response_text
+Unknown,No recommendation available.
+Adequate hydration: maintain consistency,Drink a glass of water every day to stay hydrated.
+Prolonged period: consult doctor,Consult a doctor if you have a prolonged period.
+"Critical: severe pain, consult doctor",Consult a doctor if you have severe pain.
+High anxiety detected: relaxation required,Relax.
+Low mood & low energy: prioritize mental health,Prioritize mental health over physical health.
+Severe stress and multiple symptoms: rest & consult,Rest and consult with a health care provider if you have severe stress and multiple symptoms.
+"PMS symptoms: comfort, herbal tea, relaxation",Try a cup of herbal tea to help relieve your PMS symptoms.
+High stress: physical activity or mindfulness,Try physical activity or mindfulness to reduce stress.
+Multiple symptoms: consider rest & hydration,Rest & hydrate.
+Critical: poor sleep + high stress,"Sleep more, eat healthier, exercise more, drink more alcohol, reduce caffeine intake, smoke less, reduce stress, ovulation day, pms window, symptoms present, period_today, very_low_energy, sleep deprivation"
+Poor sleep detected: improve rest tonight,Improve your sleep tonight.
+Unusually long cycle: consult if persistent,Consult a health care provider if you have a cycle that is unusually long.
+"Period today: rest, hydration, iron-rich foods","Rest, hydrate, and eat iron-rich foods."
+Unusually short cycle: monitor irregularities,Monitor irregularities.
+Upcoming period with stress: relaxation recommended,Relax.
+Fertile window: prioritize reproductive health,Prioritize reproductive health.
+"Ovulation day: high fertility, track symptoms",Track symptoms and ovulation day.
+Upcoming period with low energy: gentle routine,Try a gentle routine.
+Pre-period phase: prepare body with self-care,Pre-period phase: Prepare body with self-care.
+Period today with severe pain: consult doctor,Consult a doctor if you have severe pain today.
+Period today + poor sleep: prioritize rest & hydration,Rest and hydrate.
+,No recommendation available.
