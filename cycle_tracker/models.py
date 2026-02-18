@@ -50,6 +50,20 @@ class Period(models.Model):
 
 
     def save(self, *args, **kwargs):
+        # Check if user is female before allowing period creation
+        try:
+            profile = self.user.userprofile
+            user_gender = profile.sex or 'none'
+            
+            if user_gender != 'female':
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Period tracking is only available for female users.")
+        except Exception as e:
+            if "Period tracking is only available" in str(e):
+                raise
+            # If profile doesn't exist, allow save (will be caught elsewhere)
+            pass
+
         profile = self.user.userprofile
 
         # if start and end date is available

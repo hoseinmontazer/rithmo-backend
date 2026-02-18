@@ -23,6 +23,26 @@ class PeriodSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Period duration must be between 2 and 10 days.")
         return value
     
+    def validate(self, data):
+        """Ensure only female users can create period entries."""
+        user = self.context['request'].user
+        
+        try:
+            profile = user.userprofile
+            user_gender = profile.sex or 'none'
+            
+            if user_gender != 'female':
+                raise serializers.ValidationError(
+                    "Period tracking is only available for female users. "
+                    "Male users can track their partner's cycle by linking a partner."
+                )
+        except Exception as e:
+            if "Period tracking is only available" in str(e):
+                raise
+            raise serializers.ValidationError("User profile not found.")
+        
+        return data
+    
     def create(self, validated_data):
         """Associate the period with the authenticated user."""
         user = self.context['request'].user

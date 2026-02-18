@@ -17,6 +17,58 @@ class PeriodViewSet(viewsets.ModelViewSet):
     serializer_class = PeriodSerializer
     permission_classes= [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        """Override create to check gender before allowing period creation."""
+        try:
+            profile = request.user.userprofile
+            user_gender = profile.sex or 'none'
+            
+            if user_gender != 'female':
+                return Response({
+                    'error': 'Period tracking is only available for female users.',
+                    'message': 'Male users can track their partner\'s cycle by linking a partner in their profile.'
+                }, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({
+                'error': 'User profile not found.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """Override update to check gender."""
+        try:
+            profile = request.user.userprofile
+            user_gender = profile.sex or 'none'
+            
+            if user_gender != 'female':
+                return Response({
+                    'error': 'Period tracking is only available for female users.'
+                }, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({
+                'error': 'User profile not found.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to check gender."""
+        try:
+            profile = request.user.userprofile
+            user_gender = profile.sex or 'none'
+            
+            if user_gender != 'female':
+                return Response({
+                    'error': 'Period tracking is only available for female users.'
+                }, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({
+                'error': 'User profile not found.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().partial_update(request, *args, **kwargs)
+
 
     @action(detail=False, methods=['PATCH'] , url_path='update')
     def update_latest_period(self, request):
@@ -91,41 +143,78 @@ class PeriodViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Return queryset based on request role.
-        If role is 'partner', return partner's periods if authorized.
-        Otherwise return user's own periods.
+        Return queryset based on user gender and request role.
+        - Female users: return their own periods
+        - Male users: return partner's periods if they have a partner linked
+        - If role='partner' is specified: return partner's periods (for female users sharing with male partners)
         """
         user = self.request.user
+        
+        # Get user gender
+        try:
+            profile = user.userprofile
+            user_gender = profile.sex or 'none'
+        except:
+            user_gender = 'none'
+        
         # Check both query params and headers for role
         role = self.request.query_params.get('role') or self.request.headers.get('role', 'self')
 
-        if role == 'partner':
-            print('partner')
-            # Get the user's profile and check if they have any partners
+        # For female users
+        if user_gender == 'female':
+            if role == 'partner':
+                # Female user sharing data with partner
+                user_profile = user.userprofile
+                partners = user_profile.partners.all()
+                
+                if not partners.exists():
+                    return Period.objects.none()
+                    
+                # Get the first partner and their periods
+                partner = partners.first()
+                partner_user = partner.user
+                
+                # Add partner info to the request object for use in serializer
+                partner_name = f"{partner_user.first_name} {partner_user.last_name}".strip()
+                if not partner_name:
+                    partner_name = partner_user.username
+                    
+                self.request.partner_info = {
+                    'partner_name': partner_name,
+                    'partner_id': partner.id
+                }
+                
+                return Period.objects.filter(user=partner_user)
+            else:
+                # Return own periods
+                return Period.objects.filter(user=user)
+        
+        # For male users - only show partner's periods
+        elif user_gender == 'male':
             user_profile = user.userprofile
             partners = user_profile.partners.all()
-            print(f"partners: {partners}")
+            
             if not partners.exists():
                 return Period.objects.none()
                 
-            # Get the first partner and their periods
+            # Get the first partner (should be female)
             partner = partners.first()
             partner_user = partner.user
-            print(f"partner_user: {partner_user}")
             
-            # Add partner info to the request object for use in serializer
+            # Add partner info to the request object
             partner_name = f"{partner_user.first_name} {partner_user.last_name}".strip()
-            if not partner_name:  # If both first_name and last_name are empty
-                partner_name = partner_user.username  # Fall back to username
+            if not partner_name:
+                partner_name = partner_user.username
                 
             self.request.partner_info = {
                 'partner_name': partner_name,
-                'partner_id': partner.id  # Using UserProfile ID instead of User ID
+                'partner_id': partner.id
             }
             
             return Period.objects.filter(user=partner_user)
-            
-        return Period.objects.filter(user=user)
+        
+        # For users with no gender set or 'none'
+        return Period.objects.none()
     
     def perform_create(self, serializer):
         """Assign the logged-in user as the owner of the period entry."""
@@ -733,17 +822,65 @@ class OvulationDetailView(APIView):
     permission_classes= [IsAuthenticated]
 
     def get(self,request ,period_id=None ):
+        # Check user gender
         try:
-            if period_id is not None:
-                period = Period.objects.get(id=period_id, user=request.user)
-            else:
-                period = Period.objects.filter(user=request.user).latest("start_date")
-                if not period:
-                    return Response({"error": "No period data found for the user."}, status=status.HTTP_404_NOT_FOUND)
+            profile = request.user.userprofile
+            user_gender = profile.sex or 'none'
+        except:
+            user_gender = 'none'
+        
+        try:
+            # For female users - get their own ovulation data
+            if user_gender == 'female':
+                if period_id is not None:
+                    period = Period.objects.get(id=period_id, user=request.user)
+                else:
+                    period = Period.objects.filter(user=request.user).latest("start_date")
+                    if not period:
+                        return Response({"error": "No period data found for the user."}, status=status.HTTP_404_NOT_FOUND)
+                    
+                ovulation, created = Ovulation.objects.get_or_create(period=period, user=request.user)
+                serializer = OvulationSerializer(ovulation)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            
+            # For male users - get partner's ovulation data
+            elif user_gender == 'male':
+                user_profile = request.user.userprofile
+                partners = user_profile.partners.all()
                 
-            ovulation, created = Ovulation.objects.get_or_create(period=period, user=request.user)
-            serializer = OvulationSerializer(ovulation)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+                if not partners.exists():
+                    return Response({
+                        "error": "No partner linked. Please link a partner to view ovulation data."
+                    }, status=status.HTTP_404_NOT_FOUND)
+                
+                partner = partners.first()
+                partner_user = partner.user
+                
+                if period_id is not None:
+                    period = Period.objects.get(id=period_id, user=partner_user)
+                else:
+                    period = Period.objects.filter(user=partner_user).latest("start_date")
+                    if not period:
+                        return Response({
+                            "error": "No period data found for your partner."
+                        }, status=status.HTTP_404_NOT_FOUND)
+                
+                ovulation, created = Ovulation.objects.get_or_create(period=period, user=partner_user)
+                serializer = OvulationSerializer(ovulation)
+                
+                partner_name = f"{partner_user.first_name} {partner_user.last_name}".strip() or partner_user.username
+                response_data = serializer.data
+                response_data['partner_name'] = partner_name
+                
+                return Response(response_data, status=status.HTTP_200_OK)
+            
+            else:
+                return Response({
+                    "error": "Ovulation tracking requires a gender to be set in your profile."
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Period.DoesNotExist:
+            return Response({"error": "Period not found."}, status=status.HTTP_404_NOT_FOUND)
         except Ovulation.DoesNotExist:
             return Response({"error": "Ovulation data not found for this period."}, status=status.HTTP_404_NOT_FOUND)
         
