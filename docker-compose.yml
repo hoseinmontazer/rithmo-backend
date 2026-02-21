@@ -1,24 +1,21 @@
-version: '3.8'
+version: '3.8'  # Specify the Docker Compose version
 
 services:
-  period:
-    image: period:latest
-    container_name: period
+  rithmo:
+    image: registry.uid.ir/uid/rithmo
+    container_name: rithmo
     ports:
-      - "8002:8000"
+      - "127.0.0.1:8001:8000"  # Map host port 8000 to container port 8000
     environment:
-      - DEBUG=True
-      - HF_HOME=/root/.cache/huggingface
+      - DEBUG=True  # Set environment variables if needed
+      - TZ=Asia/Tehran  # Set timezone to Tehran
     volumes:
-      - /home/hosein/models--google--flan-t5-large:/root/.cache/huggingface/hub/models--google--flan-t5-large
-      - /docker/period/app/ml_models:/app/ml_models
-      - /docker/period/app/ml_cache:/app/ml_cache
-
+       - /docker/files/libermaze/rithmo/media:/app/media
     env_file:
-      - /docker/period/app/env/.env
+      - /docker/files/libermaze/rithmo/env/.env
     networks:
-      - gotorrentz
+      - iapps
 
 networks:
-  gotorrentz:
+  iapps:
     external: true
