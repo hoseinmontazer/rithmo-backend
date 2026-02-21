@@ -2,7 +2,7 @@ version: '3.8'  # Specify the Docker Compose version
 
 services:
   rithmo:
-    image: registry.uid.ir/uid/rithmo
+    image: rithmo
     container_name: rithmo
     ports:
       - "127.0.0.1:8001:8000"  # Map host port 8000 to container port 8000
