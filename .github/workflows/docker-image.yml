@@ -16,6 +16,6 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build the Docker image
       run: |
-           docker rm -f period
-           docker build . --file Dockerfile --tag period
+           docker rm -f rithmo
+           docker build . --file Dockerfile --tag rithmo
            docker compose up -d  
