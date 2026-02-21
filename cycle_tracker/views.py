@@ -191,6 +191,7 @@ class PeriodViewSet(viewsets.ModelViewSet):
         
         # For male users - only show partner's periods
         elif user_gender == 'male':
+            print("start")
             user_profile = user.userprofile
             partners = user_profile.partners.all()
             
@@ -200,7 +201,7 @@ class PeriodViewSet(viewsets.ModelViewSet):
             # Get the first partner (should be female)
             partner = partners.first()
             partner_user = partner.user
-            
+            print(partner_user, partner)
             # Add partner info to the request object
             partner_name = f"{partner_user.first_name} {partner_user.last_name}".strip()
             if not partner_name:
@@ -479,7 +480,7 @@ class PeriodViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
             
         latest_period = periods.first()
-        
+        print("latest_period ==>",latest_period)
         # Get user profile for gender
         try:
             profile = request.user.userprofile
@@ -506,6 +507,7 @@ class PeriodViewSet(viewsets.ModelViewSet):
                     
                     if partner_periods.exists():
                         partner_latest_period = partner_periods.first()
+                        print("partner_latest_period",partner_latest_period)
                         partner_analysis = partner_latest_period.analyze_cycle_regularity()
                         
                         # Get partner's gender
@@ -619,18 +621,32 @@ class PeriodViewSet(viewsets.ModelViewSet):
         next_period_date = latest_period.next_period_start_date or latest_period.calculate_next_period()
         days_until_next = (next_period_date - today).days if next_period_date else None
         
-        # Calculate cycle day (day in current cycle)
+        # Calculate cycle day (day in current cycle) and expected cycle length
         cycle_day = None
-        cycle_length = latest_period.cycle_length or 28
+        # Use the expected cycle length for the CURRENT cycle, not the historical one
+        if next_period_date:
+            # Calculate expected cycle length based on next period prediction
+            expected_cycle_length = (next_period_date - latest_period.start_date).days
+        else:
+            # Fallback to user profile or default
+            try:
+                expected_cycle_length = latest_period.user.userprofile.cycle_length or 28
+            except:
+                expected_cycle_length = 28
+        
+        # Ensure cycle length is reasonable (21-45 days)
+        if expected_cycle_length < 21 or expected_cycle_length > 45:
+            expected_cycle_length = 28
+        
         if latest_period.start_date <= today:
             cycle_day = (today - latest_period.start_date).days + 1
-            # If past cycle length, we're in next cycle
-            if cycle_day > cycle_length and next_period_date and today >= next_period_date:
+            # If past expected cycle length and next period has started, we're in next cycle
+            if cycle_day > expected_cycle_length and next_period_date and today >= next_period_date:
                 cycle_day = (today - next_period_date).days + 1
         
         # Determine phase
         phase, phase_description, is_fertile = self._determine_cycle_phase(
-            cycle_day, cycle_length, is_on_period, current_day
+            cycle_day, expected_cycle_length, is_on_period, current_day, days_until_next
         )
         
         return {
@@ -641,10 +657,10 @@ class PeriodViewSet(viewsets.ModelViewSet):
             'phase_description': phase_description,
             'days_until_next_period': days_until_next,
             'is_fertile_window': is_fertile,
-            'cycle_length': cycle_length
+            'cycle_length': expected_cycle_length
         }
     
-    def _determine_cycle_phase(self, cycle_day, cycle_length, is_on_period, period_day):
+    def _determine_cycle_phase(self, cycle_day, cycle_length, is_on_period, period_day, days_until_next):
         """Determine which phase of the cycle the user is in."""
         if cycle_day is None:
             return 'Unknown', 'Unable to determine cycle phase', False
@@ -686,7 +702,16 @@ class PeriodViewSet(viewsets.ModelViewSet):
         
         # Luteal Phase (Days 17-28)
         if cycle_day > fertile_end:
-            days_to_period = cycle_length - cycle_day
+            # Use days_until_next if available for more accurate messaging
+            if days_until_next is not None and days_until_next >= 0:
+                days_to_period = days_until_next
+            else:
+                # Fallback calculation
+                days_to_period = cycle_length - cycle_day
+                # Ensure it's not negative
+                if days_to_period < 0:
+                    days_to_period = 0
+
             if days_to_period <= 3:
                 return (
                     'Late Luteal (PMS)',
