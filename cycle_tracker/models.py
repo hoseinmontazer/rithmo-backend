@@ -311,8 +311,68 @@ class WellnessLog(models.Model):
     #  (Mental Health)
     anxiety_level = models.IntegerField(default=0) 
     focus_level = models.IntegerField(default=0) 
-
     notes = models.TextField(blank=True, null=True) 
+
+
+    # -------- Physical tracking --------
+    steps = models.IntegerField(default=0)
+    calories_burned = models.IntegerField(default=0)
+    calories_intake = models.IntegerField(default=0)
+    water_intake_ml = models.IntegerField(default=0)
+
+    # -------- Computed fields --------
+    wellness_score = models.FloatField(default=0)
+    sleep_score = models.FloatField(default=0)
+    activity_score = models.FloatField(default=0)
+    mental_score = models.FloatField(default=0)
 
     class Meta:
         unique_together = ("user", "date")  # Ensures that each user can only have one wellness log entry per day.
+
+    def calculate_scores(self):
+        """Calculate wellness scores based on logged data."""
+        # Sleep score (0-100) - optimal is 7-9 hours
+        if self.sleep_hours >= 7 and self.sleep_hours <= 9:
+            sleep_score = 100
+        elif self.sleep_hours < 7:
+            sleep_score = min((self.sleep_hours / 7) * 100, 100)
+        else:
+            sleep_score = max(100 - ((self.sleep_hours - 9) * 10), 0)
+
+        # Activity score (0-100) - based on steps (10000 is optimal)
+        activity_score = min((self.steps / 10000) * 100, 100)
+        
+        # Add exercise bonus
+        if self.exercise_minutes > 0:
+            exercise_bonus = min((self.exercise_minutes / 30) * 20, 20)
+            activity_score = min(activity_score + exercise_bonus, 100)
+
+        # Mental score (0-100) - lower stress/anxiety/pain is better
+        mental_score = 100
+        mental_score -= (self.stress_level * 8)  # 0-10 scale
+        mental_score -= (self.anxiety_level * 8)  # 0-10 scale
+        mental_score -= (self.pain_level * 5)  # 0-10 scale
+        mental_score = max(mental_score, 0)
+        
+        # Add mood and energy bonus
+        if self.mood_level > 5:
+            mental_score = min(mental_score + ((self.mood_level - 5) * 2), 100)
+        if self.energy_level > 5:
+            mental_score = min(mental_score + ((self.energy_level - 5) * 2), 100)
+
+        # Overall wellness score (weighted average)
+        wellness_score = (
+            sleep_score * 0.3 +
+            activity_score * 0.3 +
+            mental_score * 0.4
+        )
+
+        self.sleep_score = round(sleep_score, 2)
+        self.activity_score = round(activity_score, 2)
+        self.mental_score = round(mental_score, 2)
+        self.wellness_score = round(wellness_score, 2)
+    
+    def save(self, *args, **kwargs):
+        """Override save to calculate scores automatically."""
+        self.calculate_scores()
+        super().save(*args, **kwargs)

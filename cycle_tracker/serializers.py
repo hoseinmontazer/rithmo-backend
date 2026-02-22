@@ -64,7 +64,13 @@ class WellnessLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = WellnessLog
         fields = '__all__'
-        read_only_fields = ['user']  
+        read_only_fields = [
+            'user',
+            'wellness_score',
+            'sleep_score',
+            'activity_score',
+            'mental_score'
+        ]
 
 
 

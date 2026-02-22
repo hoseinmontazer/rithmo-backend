@@ -919,16 +919,333 @@ class WellnessLogView(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         user = request.user
-        today = timezone.localdate()  # ✅ تاریخ خالص (نه datetime)
+        today = timezone.localdate()
+
+        data = request.data.copy()
+        data.pop('user', None)  # Remove user if sent
 
         instance, created = WellnessLog.objects.update_or_create(
             user=user,
             date=today,
-            defaults=request.data  # داده‌های POST شده
+            defaults=data
         )
+        
+        # Calculate scores
+        instance.calculate_scores()
+        instance.save()
 
         serializer = self.get_serializer(instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            'status': 'success',
+            'message': 'Wellness log created' if created else 'Wellness log updated',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def analytics(self, request):
+        """Get comprehensive wellness analytics."""
+        from datetime import timedelta
+        from django.db.models import Avg, Max, Min
+        
+        # Get date range from query params (default: last 30 days)
+        days = int(request.query_params.get('days', 30))
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(days=days)
+        
+        logs = WellnessLog.objects.filter(
+            user=request.user,
+            date__gte=start_date,
+            date__lte=end_date
+        ).order_by('date')
+        
+        if not logs.exists():
+            return Response({
+                'error': 'No wellness data found for the specified period'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Calculate averages
+        averages = logs.aggregate(
+            avg_wellness=Avg('wellness_score'),
+            avg_sleep=Avg('sleep_hours'),
+            avg_mood=Avg('mood_level'),
+            avg_energy=Avg('energy_level'),
+            avg_stress=Avg('stress_level'),
+            avg_anxiety=Avg('anxiety_level'),
+            avg_pain=Avg('pain_level'),
+            avg_steps=Avg('steps'),
+            avg_water=Avg('water_intake_ml'),
+            avg_exercise=Avg('exercise_minutes')
+        )
+        
+        # Get trends (compare first half vs second half)
+        mid_date = start_date + timedelta(days=days//2)
+        first_half = logs.filter(date__lt=mid_date)
+        second_half = logs.filter(date__gte=mid_date)
+        
+        trends = {}
+        if first_half.exists() and second_half.exists():
+            first_avg = first_half.aggregate(
+                wellness=Avg('wellness_score'),
+                sleep=Avg('sleep_hours'),
+                mood=Avg('mood_level'),
+                energy=Avg('energy_level')
+            )
+            second_avg = second_half.aggregate(
+                wellness=Avg('wellness_score'),
+                sleep=Avg('sleep_hours'),
+                mood=Avg('mood_level'),
+                energy=Avg('energy_level')
+            )
+            
+            for key in ['wellness', 'sleep', 'mood', 'energy']:
+                if first_avg[key] and second_avg[key]:
+                    change = second_avg[key] - first_avg[key]
+                    trends[key] = {
+                        'change': round(change, 2),
+                        'direction': 'improving' if change > 0 else 'declining' if change < 0 else 'stable'
+                    }
+        
+        # Get best and worst days
+        best_day = logs.order_by('-wellness_score').first()
+        worst_day = logs.order_by('wellness_score').first()
+        
+        # Generate insights
+        insights = self._generate_wellness_insights(averages, trends, logs)
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'period': {
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'days': days,
+                    'logs_count': logs.count()
+                },
+                'averages': {
+                    'wellness_score': round(averages['avg_wellness'] or 0, 1),
+                    'sleep_hours': round(averages['avg_sleep'] or 0, 1),
+                    'mood_level': round(averages['avg_mood'] or 0, 1),
+                    'energy_level': round(averages['avg_energy'] or 0, 1),
+                    'stress_level': round(averages['avg_stress'] or 0, 1),
+                    'anxiety_level': round(averages['avg_anxiety'] or 0, 1),
+                    'pain_level': round(averages['avg_pain'] or 0, 1),
+                    'steps': round(averages['avg_steps'] or 0),
+                    'water_ml': round(averages['avg_water'] or 0),
+                    'exercise_minutes': round(averages['avg_exercise'] or 0)
+                },
+                'trends': trends,
+                'best_day': {
+                    'date': best_day.date,
+                    'wellness_score': best_day.wellness_score
+                } if best_day else None,
+                'worst_day': {
+                    'date': worst_day.date,
+                    'wellness_score': worst_day.wellness_score
+                } if worst_day else None,
+                'insights': insights
+            }
+        })
+    
+    @action(detail=False, methods=['get'])
+    def weekly_summary(self, request):
+        """Get weekly wellness summary."""
+        from datetime import timedelta
+        from django.db.models import Avg
+        
+        end_date = timezone.localdate()
+        start_date = end_date - timedelta(days=7)
+        
+        logs = WellnessLog.objects.filter(
+            user=request.user,
+            date__gte=start_date,
+            date__lte=end_date
+        ).order_by('date')
+        
+        if not logs.exists():
+            return Response({
+                'error': 'No wellness data for the past week'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Daily breakdown
+        daily_data = []
+        for log in logs:
+            daily_data.append({
+                'date': log.date,
+                'wellness_score': log.wellness_score,
+                'sleep_hours': log.sleep_hours,
+                'mood_level': log.mood_level,
+                'energy_level': log.energy_level,
+                'stress_level': log.stress_level,
+                'steps': log.steps
+            })
+        
+        # Weekly averages
+        weekly_avg = logs.aggregate(
+            avg_wellness=Avg('wellness_score'),
+            avg_sleep=Avg('sleep_hours'),
+            avg_mood=Avg('mood_level'),
+            avg_energy=Avg('energy_level'),
+            avg_stress=Avg('stress_level')
+        )
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'week_start': start_date,
+                'week_end': end_date,
+                'daily_logs': daily_data,
+                'weekly_averages': {
+                    'wellness_score': round(weekly_avg['avg_wellness'] or 0, 1),
+                    'sleep_hours': round(weekly_avg['avg_sleep'] or 0, 1),
+                    'mood_level': round(weekly_avg['avg_mood'] or 0, 1),
+                    'energy_level': round(weekly_avg['avg_energy'] or 0, 1),
+                    'stress_level': round(weekly_avg['avg_stress'] or 0, 1)
+                },
+                'logs_count': logs.count(),
+                'completion_rate': round((logs.count() / 7) * 100, 1)
+            }
+        })
+    
+    @action(detail=False, methods=['get'])
+    def today(self, request):
+        """Get today's wellness log."""
+        today = timezone.localdate()
+        
+        try:
+            log = WellnessLog.objects.get(user=request.user, date=today)
+            serializer = self.get_serializer(log)
+            return Response({
+                'status': 'success',
+                'data': serializer.data
+            })
+        except WellnessLog.DoesNotExist:
+            return Response({
+                'status': 'success',
+                'message': 'No wellness log for today yet',
+                'data': None
+            })
+    
+    @action(detail=False, methods=['get'])
+    def streaks(self, request):
+        """Calculate wellness tracking streaks."""
+        from datetime import timedelta
+        
+        logs = WellnessLog.objects.filter(user=request.user).order_by('-date')
+        
+        if not logs.exists():
+            return Response({
+                'status': 'success',
+                'data': {
+                    'current_streak': 0,
+                    'longest_streak': 0,
+                    'total_logs': 0
+                }
+            })
+        
+        # Calculate current streak
+        current_streak = 0
+        expected_date = timezone.localdate()
+        
+        for log in logs:
+            if log.date == expected_date:
+                current_streak += 1
+                expected_date -= timedelta(days=1)
+            else:
+                break
+        
+        # Calculate longest streak
+        longest_streak = 0
+        temp_streak = 1
+        prev_date = None
+        
+        for log in logs.order_by('date'):
+            if prev_date and (log.date - prev_date).days == 1:
+                temp_streak += 1
+            else:
+                longest_streak = max(longest_streak, temp_streak)
+                temp_streak = 1
+            prev_date = log.date
+        
+        longest_streak = max(longest_streak, temp_streak)
+        
+        return Response({
+            'status': 'success',
+            'data': {
+                'current_streak': current_streak,
+                'longest_streak': longest_streak,
+                'total_logs': logs.count(),
+                'last_log_date': logs.first().date
+            }
+        })
+    
+    def _generate_wellness_insights(self, averages, trends, logs):
+        """Generate personalized wellness insights."""
+        insights = []
+        
+        # Sleep insights
+        avg_sleep = averages.get('avg_sleep', 0)
+        if avg_sleep < 6:
+            insights.append({
+                'category': 'sleep',
+                'type': 'warning',
+                'message': f'Your average sleep is {avg_sleep:.1f} hours. Aim for 7-9 hours for optimal health.'
+            })
+        elif avg_sleep >= 7 and avg_sleep <= 9:
+            insights.append({
+                'category': 'sleep',
+                'type': 'positive',
+                'message': f'Great job! Your sleep average of {avg_sleep:.1f} hours is in the healthy range.'
+            })
+        
+        # Activity insights
+        avg_steps = averages.get('avg_steps', 0)
+        if avg_steps >= 8000:
+            insights.append({
+                'category': 'activity',
+                'type': 'positive',
+                'message': f'Excellent! You\'re averaging {int(avg_steps)} steps per day.'
+            })
+        elif avg_steps < 5000:
+            insights.append({
+                'category': 'activity',
+                'type': 'suggestion',
+                'message': f'Try to increase your daily steps. Current average: {int(avg_steps)} steps.'
+            })
+        
+        # Stress insights
+        avg_stress = averages.get('avg_stress', 0)
+        if avg_stress >= 7:
+            insights.append({
+                'category': 'mental_health',
+                'type': 'warning',
+                'message': 'Your stress levels are high. Consider relaxation techniques or speaking with a professional.'
+            })
+        
+        # Trend insights
+        if trends:
+            if trends.get('wellness', {}).get('direction') == 'improving':
+                insights.append({
+                    'category': 'overall',
+                    'type': 'positive',
+                    'message': 'Your overall wellness is improving! Keep up the good work.'
+                })
+            elif trends.get('wellness', {}).get('direction') == 'declining':
+                insights.append({
+                    'category': 'overall',
+                    'type': 'warning',
+                    'message': 'Your wellness score is declining. Focus on self-care and healthy habits.'
+                })
+        
+        # Hydration insights
+        avg_water = averages.get('avg_water', 0)
+        if avg_water < 2000:
+            insights.append({
+                'category': 'hydration',
+                'type': 'suggestion',
+                'message': f'Increase your water intake. Current average: {int(avg_water)}ml. Aim for 2000-3000ml daily.'
+            })
+        
+        return insights
 
 
 
